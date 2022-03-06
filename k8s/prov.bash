@@ -72,10 +72,11 @@ EOF
 
 installArgoCd() {
     helm repo add argo https://argoproj.github.io/argo-helm
-    helm upgrade --install argocd \
+    
+    helm upgrade --install argocd argo/argo-cd \
     --namespace=argocd \
     --create-namespace \
-    -f ${VALUES_FILE}
+    -f https://raw.githubusercontent.com/paas2/cicd/main/argocd/dev/install/values-override.yaml
 }
 
 main () {
