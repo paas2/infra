@@ -76,7 +76,7 @@ installArgoCd() {
     helm upgrade --install argocd argo/argo-cd \
     --namespace=argocd \
     --create-namespace \
-    -f https://raw.githubusercontent.com/paas2/cicd/main/argocd/dev/install/values-override.yaml
+    -f ${VALUES_FILE}
 }
 
 main () {

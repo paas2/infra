@@ -6,3 +6,10 @@ sh prov.bash \
 --profile cicd 
 
 
+sh prov.bash \
+--f https://raw.githubusercontent.com/paas2/bwb-cluster/main/argocd/dev/install/values-override.yaml \
+--lb 192.168.101.85-192.168.101.98 \
+--profile bwb 
+
+
+
