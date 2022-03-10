@@ -1,5 +1,6 @@
 #!/bin/bash
 
+REPO=${REPO:-null}
 VALUES_FILE=${VALUES_FILE:-null}
 LB_ADRESSES=${LB_ADRESSES:-192.168.100.85-192.168.100.98}
 PROFILE=${PROFILE:-dev}
@@ -26,6 +27,9 @@ processOptions () {
 
     while [[ $# > 0 ]]; do
         case "$1" in
+            --repo)
+                REPO=${2}; shift 2
+            ;;        
             --f)
                 VALUES_FILE=${2}; shift 2
             ;;
@@ -79,12 +83,8 @@ EOF
 }
 
 installArgoCd() {
-    helm repo add argo https://argoproj.github.io/argo-helm
-    
-    helm upgrade --install argocd argo/argo-cd \
-    --namespace=argocd \
-    --create-namespace \
-    -f ${VALUES_FILE}
+    git clone https://github.com/paas2/argocd
+    helm upgrade argocd helm-charts/argocd -f helm-charts/argocd/${VALUES_FILE} --namespace app --create-namespace --install
 }
 
 main () {
