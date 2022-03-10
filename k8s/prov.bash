@@ -53,7 +53,15 @@ startMinikube() {
     --addons metallb \
     --disk-size 40G \
     --memory 6G \
-    --driver virtualbox
+    --driver virtualbox \
+    --bootstrapper kubeadm \ #added for prometheus operator
+    --extra-config kubelet.authentication-token-webhook=true \ # This flag enables, that a ServiceAccount token can be used to authenticate against the kubelet(s). This can also be enabled by setting the kubelet configuration value authentication.webhook.enabled to true
+    --extra-config kubelet.authorization-mode=Webhook \ # This flag enables, that the kubelet will perform an RBAC request with the API to determine, whether the requesting entity (Prometheus in this case) is allowed to access a resource, in specific for this project the /metrics endpoint. This can also be enabled by setting the kubelet configuration value authorization.mode to Webhook
+    --extra-config scheduler.bind-address=0.0.0.0 \
+    --extra-config controller-manager.bind-address=0.0.0.0 \
+    --kubernetes-version=v1.23.0
+
+    minikube addons disable metrics-server # The kube-prometheus stack includes a resource metrics API server, so the metrics-server addon is not necessary. Ensure the metrics-server addon is disabled on minikube:
 
   cat <<EOF | kubectl apply -f -
 apiVersion: v1
