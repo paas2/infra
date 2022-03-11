@@ -68,6 +68,8 @@ startMinikube() {
     --extra-config kubelet.authorization-mode=Webhook \
     --extra-config scheduler.bind-address=0.0.0.0 \
     --extra-config controller-manager.bind-address=0.0.0.0 \
+    --extra-config apiserver.enable-admission-plugins=ValidatingAdmissionWebhook \
+    --extra-config apiserver.enable-admission-plugins=MutatingAdmissionWebhook \
     --kubernetes-version=v1.23.0
 
     minikube addons disable metrics-server
