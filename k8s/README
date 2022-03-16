@@ -9,8 +9,15 @@ sh prov.bash \
 
 sh prov.bash \
 --f values-bwb-dev.yaml \
---lb 192.168.100.85-192.168.100.98 \
+--lb 192.168.101.85-192.168.101.98 \
 --profile bwb-dev \
+--memory 6G
+
+
+sh prov.bash \
+--f values-security-dev.yaml \
+--lb 192.168.102.85-192.168.102.98 \
+--profile security-dev \
 --memory 6G
 
 
