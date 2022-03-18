@@ -19,6 +19,6 @@ fi
 #   --profile root-ca --no-password --insecure --san root.paas2 \
 #   --not-after 87600h --kty RSA 
 
-step certificate create intermediate.paas2 ${cert_dir}/intermediate/ca-cert.pem ${cert_dir}/intermediate/ca-key.pem --ca ${cert_dir}/root-cert.pem --ca-key ${cert_dir}/root-ca.key --profile intermediate-ca --not-after 8760h --no-password --insecure --san intermediate.paas2 --kty RSA 
+step certificate create intermediate.paas2 ~/ca-cert.pem ~/ca-key.pem --ca ${cert_dir}/root-cert.pem --ca-key ${cert_dir}/root-ca.key --profile intermediate-ca --not-after 8760h --no-password --insecure --san intermediate.paas2 --kty RSA 
 
-cat ${cert_dir}/intermediate/ca-cert.pem ${cert_dir}/root-cert.pem > ${cert_dir}/intermediate/cert-chain.pem
+cat ~/ca-cert.pem ~/root-cert.pem > ~/cert-chain.pem

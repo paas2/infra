@@ -50,13 +50,15 @@ main () {
     echo "VAULES_FILE:  ${VAULES_FILE}" 
     echo "NAMESPACE:  ${NAMESPACE}"   
     echo "PATH:  ${XPATH}"   
+    
 
-    # getReviewerJWTToken
-    # getKubeCertAndHost
-    # enableKubeAuth
-    # configureKubeAuth
-    # createPolicy
-    # createRoleAndAttachPolicy
+    installVault
+    getReviewerJWTToken
+    getKubeCertAndHost
+    enableKubeAuth
+    configureKubeAuth
+    createPolicy
+    createRoleAndAttachPolicy
     createCertificates
     saveCertificatesToVault
 }
@@ -101,29 +103,29 @@ EOF
 }
 
 createRoleAndAttachPolicy() {
-    vault write auth/${XPATH}/role/${PROFILE} \
-        bound_service_account_names=default \
-        bound_service_account_namespaces=default \
-        policies=dev-app \
-        ttl=24h    
-
-    # vault write auth/dev-cluster/role/devweb-app \
-    #     bound_service_account_names=* \
-    #     bound_service_account_namespaces=* \
+    # vault write auth/${XPATH}/role/${PROFILE} \
+    #     bound_service_account_names=default \
+    #     bound_service_account_namespaces=default \
     #     policies=dev-app \
-    #     ttl=24h
+    #     ttl=24h    
+
+    vault write auth/${XPATH}/role/${PROFILE} \
+        bound_service_account_names=* \
+        bound_service_account_namespaces=* \
+        policies=${PROFILE} \
+        ttl=24h
 }
 
 createCertificates() {
-    sh generate-certificates.sh
+    sh ../certs/generate-certificates.sh
 }
 
 saveCertificatesToVault() {
     vault secrets enable -path=${XPATH} kv-v2
-    vault kv put ${XPATH}/certs/ca-cert @ca-cert.pem 
-    vault kv put ${XPATH}/certs/ca-key @ca-key.pem  
-    vault kv put ${XPATH}/certs/cert-chain @cert-chain.pem    
-    vault kv put ${XPATH}/certs/root-cert @root-cert.pem  
+    jq -Rs '{ pem: . }' ~/ca-cert.pem | vault kv put paas2/k8s/dev/certs/ca-cert.pem  -
+    jq -Rs '{ pem: . }' ~/ca-key.pem | vault kv put paas2/k8s/dev/certs/ca-key.pem  -
+    jq -Rs '{ pem: . }' ~/ca-chain.pem | vault kv put paas2/k8s/dev/certs/ca-chain.pem  -
+    jq -Rs '{ pem: . }' ~/root-cert.pem | vault kv put paas2/k8s/dev/certs/root-cert.pem  -         
 }
 
 
