@@ -4,6 +4,7 @@ VALUES_FILE=${VALUES_FILE:-null}
 LB_ADRESSES=${LB_ADRESSES:-192.168.100.85-192.168.100.98}
 PROFILE=${PROFILE:-dev}
 MEMORY=${MEMORY:-8192}
+CPUS=${CPUS:-2}
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -38,7 +39,10 @@ processOptions () {
             ;;  
             --memory)
                 MEMORY=${2}; shift 2
-            ;;                                                                      
+            ;;  
+            --cpus)
+                CPUS=${2}; shift 2
+            ;;                                                                                  
             -h | --help)
                 usage
             ;;
@@ -58,10 +62,11 @@ startMinikube() {
   minikube start \
     --profile "${PROFILE}" \
     --addons registry \
-    --addons ingress \
     --addons metallb \
+    --addons ingress \
     --disk-size 40G \
     --memory ${MEMORY} \
+    --cpus ${CPUS} \    
     --driver virtualbox \
     --bootstrapper kubeadm \
     --extra-config kubelet.authentication-token-webhook=true \
@@ -91,7 +96,8 @@ EOF
 
 installArgoCd() {
     git clone https://github.com/paas2/argocd
-    helm upgrade argocd ./argocd/helm-charts/argocd -f ./argocd/helm-charts/argocd/${VALUES_FILE} --namespace argocd --create-namespace --install
+    # helm upgrade argocd ./argocd/helm-charts/argocd -f ./argocd/helm-charts/argocd/values.yaml -f ./argocd/helm-charts/argocd/${VALUES_FILE} --namespace argocd --create-namespace --install
+    helm upgrade argocd ./argocd/helm-charts/argocd -f ./argocd/helm-charts/argocd/values.yaml -f ./argocd/helm-charts/argocd/${VALUES_FILE} --namespace argocd --create-namespace --install
     rm -rf argocd
 }
 
@@ -101,7 +107,8 @@ main () {
     echo "VALUES_FILE:  ${VALUES_FILE}"
     echo "LB_ADRESSES:  ${LB_ADRESSES}"   
     echo "PROFILE:  ${PROFILE}"         
-    echo "MEMORY:  ${MEMORY}"               
+    echo "MEMORY:  ${MEMORY}" 
+    echo "CPUS:  ${CPUS}"                   
 
     startMinikube   
     installArgoCd 
