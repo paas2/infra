@@ -42,9 +42,9 @@ main () {
     echo "PATH:  ${XPATH}"   
     
 
-    # installVault
-    getReviewerJWTToken
-    getKubeCertAndHost
+    # # installVault
+    # getReviewerJWTToken
+    # getKubeCertAndHost
     enableKubeAuth
     configureKubeAuth
     createPolicy
@@ -60,38 +60,42 @@ main () {
     # echo "full_name : $var3"          
 }
 
-getReviewerJWTToken() {
-    export VAULT_SA_NAME=$(kubectl -n argocd get sa argocd-repo-server --output jsonpath="{.secrets[*]['name']}")
-    export SA_JWT_TOKEN=$(kubectl -n argocd get secret $VAULT_SA_NAME --output 'go-template={{ .data.token }}' | base64 --decode)
-    echo $SA_JWT_TOKEN > ~/cluster-jwt-token
-}
+# getReviewerJWTToken() {
+#     echo $SA_JWT_TOKEN > ~/cluster-jwt-token
+# }
 
-getKubeCertAndHost(){
-    KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
-    echo $KUBE_CA_CERT > ~/cluster-ca.crt   
-    KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
-    echo $KUBE_HOST > ~/cluster-kube-host     
-}
+# getKubeCertAndHost(){
+#     # 
+#     # echo $KUBE_CA_CERT > ~/cluster-ca.crt   
+#     # KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
+#     # echo $KUBE_HOST > ~/cluster-kube-host     
+# }
 
 enableKubeAuth() {
     # kubectl port-forward helm-vault-0 8200:8200 -n vault --context="security-dev" 
-    export VAULT_ADDR='http://127.0.0.1:8200'
+    export VAULT_ADDR='http://192.168.99.172:31640'
     # export VAULT_TOKEN=$(cat vault-cluster-keys.json | jq -r ".root_token")     
     vault login token=$(cat ./vault-cluster-keys.json | jq -r ".root_token")  
-    vault auth enable --path=${XPATH} kubernetes
+    vault auth enable --path=${PROFILE} kubernetes
 }
 
 configureKubeAuth(){
-    vault write auth/${XPATH}/config \
-    token_reviewer_jwt="$(cat ~/cluster-jwt-token)" \
-    kubernetes_host="$(cat ~/cluster-kube-host)" \
-    kubernetes_ca_cert="$(cat ~/cluster-ca.crt)" \
+    export VAULT_SA_NAME=$(kubectl -n argocd get sa argocd-repo-server --output jsonpath="{.secrets[*]['name']}")
+    export SA_JWT_TOKEN=$(kubectl -n argocd get secret $VAULT_SA_NAME --output 'go-template={{ .data.token }}' | base64 --decode)
+    KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
+    KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
+
+
+    vault write auth/${PROFILE}/config \
+    token_reviewer_jwt=${SA_JWT_TOKEN} \
+    kubernetes_host=${KUBE_HOST} \
+    kubernetes_ca_cert="${KUBE_CA_CERT}" \
     issuer="https://kubernetes.default.svc.cluster.local"      
 }
 
 createPolicy() {
     vault policy write ${PROFILE} - <<EOF
-    path "${XPATH}/certs/*" {
+    path "avp/${PROFILE}" {
         capabilities = ["read"]
     }
 EOF
@@ -104,7 +108,7 @@ createRoleAndAttachPolicy() {
     #     policies=dev-app \
     #     ttl=24h    
 
-    vault write auth/${XPATH}/role/vprole \
+    vault write auth/${PROFILE}/role/${PROFILE} \
         bound_service_account_names=* \
         bound_service_account_namespaces=* \
         policies=${PROFILE} \
@@ -159,14 +163,21 @@ createCertificates() {
     # vault write -format=json pki/issue/bwb-dev \
     #     common_name="www.paas2.com" > pki_intermediate.csr 
 
-    read certificate issuing_ca private_key <<< $(echo $(vault write -format=json pki/issue/${PROFILE} common_name="www.paas2.com" | 
-      jq -r '.data.certificate, .data.issuing_ca, .data.private_key')) 
+    # read -r certificate issuing_ca private_key <<<$(vault write -format=json pki/issue/bwb-dev common_name="www.paas2.com" | 
+    #   jq -r '.data.certificate, .data.issuing_ca, .data.private_key') 
+
+    MY_NEW_CERT=$(vault write -format=json pki/issue/${PROFILE} common_name="www.paas2.com")
+
+    # MY_CERT=$(echo $(vault write -format=json pki/issue/bwb-dev common_name="www.paas2.com"))
+
+    # echo $MY_CERT
+
+    
 
 
-
-    echo certificate > ~/ca-cert.pem
-    echo issuing_ca > ~/root-cert.pem    
-    echo private_key > ~/ca-key.pem        
+    jq '.data.certificate' <<< $MY_NEW_CERT  > ~/ca-cert.pem
+    jq '.data.issuing_ca' <<< $MY_NEW_CERT  > ~/root-cert.pem    
+    jq '.data.private_key' <<< $MY_NEW_CERT > ~/ca-key.pem        
 
     cat ~/ca-cert.pem ~/root-cert.pem > ~/cert-chain.pem
 
@@ -185,11 +196,13 @@ createCertificates() {
 }
 
 saveCertificatesToVault() {
-    vault secrets enable -path=${XPATH} kv-v2
-    jq -Rs '{ pem: . }' ~/ca-cert.pem | vault kv put ${XPATH}/certs/ca-cert.pem  -
-    jq -Rs '{ pem: . }' ~/ca-key.pem | vault kv put ${XPATH}/certs/ca-key.pem  -
-    jq -Rs '{ pem: . }' ~/cert-chain.pem | vault kv put ${XPATH}/certs/cert-chain.pem  -
-    jq -Rs '{ pem: . }' ~/root-cert.pem | vault kv put ${XPATH}/certs/root-cert.pem  -         
+
+    vault secrets enable -path avp -version=2 kv 
+    
+    echo "{ \"ca-cert\":\"$(cat ~/ca-cert.pem | base64)\", \
+    \"ca-key\": \"$(cat ~/ca-key.pem | base64)\",\
+    \"root-cert\":\"$(cat ~/root-cert.pem | base64)\",\
+    \"cert-chain\":\"$(cat ~/cert-chain.pem | base64)\" }" | vault kv put avp/bwb-dev -     
 }
 
 
