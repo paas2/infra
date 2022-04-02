@@ -1,7 +1,6 @@
 #!/bin/bash
 
 PROFILE=${PROFILE:-dev}
-XPATH
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -22,7 +21,7 @@ processOptions () {
         case "$1" in      
             --profile)
                 PROFILE=${2}; shift 2
-            ;;                                                                                                 
+            ;;                                                                                                             
             -h | --help)
                 usage
             ;;
@@ -35,175 +34,122 @@ processOptions () {
 
 main () {
     echo -e "\nRunning"
-    
-    XPATH=paas2/k8s/${PROFILE}
-
     echo "PROFILE:  ${PROFILE}"  
-    echo "PATH:  ${XPATH}"   
-    
 
-    # # installVault
-    # getReviewerJWTToken
-    # getKubeCertAndHost
+    # K8S_AUTH_PROFILE_PATH=paas2-${PROFILE}  
+    # K8S_AUTH_SHARED_PATH=paas2-shared 
+    # KV_PATH=paas2-kv 
+    # K8_COMMON_KV_PATH=clusters/common
+
+    SAHAP2_K8S_AUTH_PROFILE_PATH=sahap2-${PROFILE}  
+    
+    SAHAP2_KV_PATH=sahap2-kv
+    SAHAP2_PKI_PATH=sahap2-pki  
+    SAHAP2_K8S_AUTH_SHARED_PAHT=sahap2-shared
+
+    SAHAP2_SHARED_KV_PATH=shared
+    SAHAP2_SHARED_POLICY_NAME=sahap2-shared-read  
+
+    
+    login
     enableKubeAuth
-    configureKubeAuth
+    configureKubeAuth    
     createPolicy
     createRoleAndAttachPolicy
+    saveK8SInfo
     createCertificates
-    saveCertificatesToVault
-
-    # read var1 var2 var3 <<< $(echo $(curl -s 'https://api.github.com/repos/torvalds/linux' |  jq -r '.id, .name, .full_name'))  
-    # # read -r var1 var2 <<< "Hello, World!"
-
-    # echo "id        : $var1"
-    # echo "name      : $var2"
-    # echo "full_name : $var3"          
+    saveCertificatesToVault        
 }
 
-# getReviewerJWTToken() {
-#     echo $SA_JWT_TOKEN > ~/cluster-jwt-token
-# }
-
-# getKubeCertAndHost(){
-#     # 
-#     # echo $KUBE_CA_CERT > ~/cluster-ca.crt   
-#     # KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
-#     # echo $KUBE_HOST > ~/cluster-kube-host     
-# }
-
-enableKubeAuth() {
-    # kubectl port-forward helm-vault-0 8200:8200 -n vault --context="security-dev" 
-    export VAULT_ADDR='http://192.168.99.172:31640'
-    # export VAULT_TOKEN=$(cat vault-cluster-keys.json | jq -r ".root_token")     
+login(){
+    echo -e "\login"
+    
+    export VAULT_ADDR='http://192.168.99.172:31640'    
     vault login token=$(cat ./vault-cluster-keys.json | jq -r ".root_token")  
-    vault auth enable --path=${PROFILE} kubernetes
+}
+
+enableKubeAuth() {  
+    echo -e "\enableKubeAuth"
+    vault auth enable --path=${SAHAP2_K8S_AUTH_PROFILE_PATH} kubernetes  
 }
 
 configureKubeAuth(){
-    export VAULT_SA_NAME=$(kubectl -n argocd get sa argocd-repo-server --output jsonpath="{.secrets[*]['name']}")
-    export SA_JWT_TOKEN=$(kubectl -n argocd get secret $VAULT_SA_NAME --output 'go-template={{ .data.token }}' | base64 --decode)
+    
+    echo -e "\configureKubeAuth"
+
+    export VAULT_SA_NAME=$(kubectl --context=${PROFILE} -n argocd get sa argocd-repo-server --output jsonpath="{.secrets[*]['name']}")
+    export SA_JWT_TOKEN=$(kubectl --context=${PROFILE} -n argocd get secret $VAULT_SA_NAME --output 'go-template={{ .data.token }}' | base64 --decode)
     KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
-    KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
+    KUBE_CA_CERT_DECODED=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
+    KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}')
 
-
-    vault write auth/${PROFILE}/config \
+    vault write auth/${SAHAP2_K8S_AUTH_PROFILE_PATH}/config \
     token_reviewer_jwt=${SA_JWT_TOKEN} \
     kubernetes_host=${KUBE_HOST} \
-    kubernetes_ca_cert="${KUBE_CA_CERT}" \
-    issuer="https://kubernetes.default.svc.cluster.local"      
+    kubernetes_ca_cert="${KUBE_CA_CERT_DECODED}" \
+    issuer="https://kubernetes.default.svc.cluster.local"          
+}
+
+saveK8SInfo() {
+    echo "{ \"certificate-authority-data\":\"${KUBE_CA_CERT}\", \
+    \"server\": \"${KUBE_HOST}\",\
+    \"sa-token\":\"${SA_JWT_TOKEN}\" }" | vault kv put ${SAHAP2_KV_PATH}/${SAHAP2_SHARED_KV_PATH}/${PROFILE} - 
 }
 
 createPolicy() {
-    vault policy write ${PROFILE} - <<EOF
-    path "avp/${PROFILE}" {
+    echo -e "\createPolicy"
+
+    vault policy write ${PROFILE}-read - <<EOF
+    path "${SAHAP2_KV_PATH}/data/${PROFILE}/*" {
         capabilities = ["read"]
     }
 EOF
 }
 
 createRoleAndAttachPolicy() {
-    # vault write auth/${XPATH}/role/${PROFILE} \
-    #     bound_service_account_names=default \
-    #     bound_service_account_namespaces=default \
-    #     policies=dev-app \
-    #     ttl=24h    
+    
+    echo -e "\createRoleAndAttachPolicy"
 
-    vault write auth/${PROFILE}/role/${PROFILE} \
-        bound_service_account_names=* \
-        bound_service_account_namespaces=* \
-        policies=${PROFILE} \
+    vault write auth/${SAHAP2_K8S_AUTH_PROFILE_PATH}/role/${PROFILE} \
+        bound_service_account_names=argocd-repo-server \
+        bound_service_account_namespaces=argocd \
+        policies=${PROFILE}-read \
+        policies=${SAHAP2_SHARED_POLICY_NAME} \
         ttl=24h
 }
 
 createCertificates() {
-    # Step 1: Generate root CA
-        # Enable the pki secrets engine at the pki path.
-    # vault secrets enable pki
-
-    #     # Tune the pki secrets engine to issue certificates with a maximum time-to-live (TTL) of 87600 hours - 10 years
-    # vault secrets tune -max-lease-ttl=87600h pki
-
-    #     # Generate the root certificate and save the certificate in CA_cert.crt.
-    #     # This generates a new self-signed CA certificate and private key. 
-    #     # Vault will automatically revoke the generated root at the end of its lease period (TTL); 
-    #     # the CA certificate will sign its own Certificate Revocation List (CRL).
-    # vault write -field=certificate pki/root/generate/internal \
-    #     common_name="paas2.com" \
-    #     ttl=87600h > CA_cert.crt
-
-    #     # Configure the CA and CRL URLs.
-    # vault write pki/config/urls \
-    #     issuing_certificates="$VAULT_ADDR/v1/pki/ca" \
-    #     crl_distribution_points="$VAULT_ADDR/v1/pki/crl"
-
-
-    # Step 2: Generate intermediate CA
-        # Now, you are going to create an intermediate CA using the root CA you regenerated in the previous step.
-
-        # First, enable the pki secrets engine at the pki_int path.        
-    # vault secrets enable -path=pki_int pki        
-
-        # Tune the pki_int secrets engine to issue certificates with a maximum time-to-live (TTL) of 43800 hours.
-    # vault secrets tune -max-lease-ttl=43800h pki_int
-
     
-        # Configure a role that maps a name in Vault to a procedure for generating a certificate. 
-        # When users or machines generate credentials, they are generated against this role:
+    echo -e "\createCertificates"
 
-    vault write pki/roles/${PROFILE} \
+    # Configure a role that maps a name in Vault to a procedure for generating a certificate. 
+    # When users or machines generate credentials, they are generated against this role:
+
+    vault write ${SAHAP2_PKI_PATH}/roles/${PROFILE} \
         allowed_domains=paas2.com \
         allow_subdomains=true \
-        max_ttl=72h
+        max_ttl=72h   
 
-        # Execute the following command to generate an intermediate and save the CSR as pki_intermediate.csr
-    
-    # vault write -format=json pki/issue/${PROFILE} \
-    #     common_name=www.paas2.com
-
-    # vault write -format=json pki/issue/bwb-dev \
-    #     common_name="www.paas2.com" > pki_intermediate.csr 
-
-    # read -r certificate issuing_ca private_key <<<$(vault write -format=json pki/issue/bwb-dev common_name="www.paas2.com" | 
-    #   jq -r '.data.certificate, .data.issuing_ca, .data.private_key') 
-
-    MY_NEW_CERT=$(vault write -format=json pki/issue/${PROFILE} common_name="www.paas2.com")
-
-    # MY_CERT=$(echo $(vault write -format=json pki/issue/bwb-dev common_name="www.paas2.com"))
-
-    # echo $MY_CERT
-
-    
-
+    MY_NEW_CERT=$(vault write -format=json ${SAHAP2_PKI_PATH}/issue/${PROFILE} common_name="www.paas2.com")
 
     jq '.data.certificate' <<< $MY_NEW_CERT  > ~/ca-cert.pem
     jq '.data.issuing_ca' <<< $MY_NEW_CERT  > ~/root-cert.pem    
     jq '.data.private_key' <<< $MY_NEW_CERT > ~/ca-key.pem        
 
     cat ~/ca-cert.pem ~/root-cert.pem > ~/cert-chain.pem
-
-    # vault write pki_int/intermediate/generate/internal common_name=ibm.com ttl=8760h        
-
-        # Sign the intermediate certificate with the root CA private key, and save the generated certificate as intermediate.cert.pem    
-    # vault write -format=json pki/root/sign-intermediate csr=@pki_intermediate.csr \
-    #     format=pem_bundle ttl="43800h" \
-    #     | jq -r '.data.certificate' > intermediate.cert.pem
-
-    #     # Once the CSR is signed and the root CA returns a certificate, it can be imported back into Vault.      
-    # vault write pki_int/intermediate/set-signed certificate=@intermediate.cert.pem          
-
-
-    # sh ../certs/generate-certificates.sh
 }
 
-saveCertificatesToVault() {
-
-    vault secrets enable -path avp -version=2 kv 
+saveCertificatesToVault() {  
     
+    echo -e "\saveCertificatesToVault"
+
     echo "{ \"ca-cert\":\"$(cat ~/ca-cert.pem | base64)\", \
     \"ca-key\": \"$(cat ~/ca-key.pem | base64)\",\
     \"root-cert\":\"$(cat ~/root-cert.pem | base64)\",\
-    \"cert-chain\":\"$(cat ~/cert-chain.pem | base64)\" }" | vault kv put avp/bwb-dev -     
+    \"cert-chain\":\"$(cat ~/cert-chain.pem | base64)\" }" | vault kv put ${SAHAP2_KV_PATH}/${PROFILE}/cacerts -     
 }
+
+
 
 
 processOptions $*
