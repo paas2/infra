@@ -41,14 +41,14 @@ main () {
     # KV_PATH=paas2-kv 
     # K8_COMMON_KV_PATH=clusters/common
 
-    SAHAP2_K8S_AUTH_PROFILE_PATH=sahap2-${PROFILE}  
+    sahab2_K8S_AUTH_PROFILE_PATH=sahab2-${PROFILE}  
     
-    SAHAP2_KV_PATH=sahap2-kv
-    SAHAP2_PKI_PATH=sahap2-pki  
-    SAHAP2_K8S_AUTH_SHARED_PAHT=sahap2-shared
+    sahab2_KV_PATH=sahab2-kv
+    sahab2_PKI_PATH=sahab2-pki  
+    sahab2_K8S_AUTH_SHARED_PAHT=sahab2-shared
 
-    SAHAP2_SHARED_KV_PATH=shared
-    SAHAP2_SHARED_POLICY_NAME=sahap2-shared-read  
+    sahab2_SHARED_KV_PATH=shared
+    sahab2_SHARED_POLICY_NAME=sahab2-shared-read  
 
     
     login
@@ -64,13 +64,13 @@ main () {
 login(){
     echo -e "\login"
     
-    export VAULT_ADDR='http://192.168.99.172:31640'    
-    vault login token=$(cat ./vault-cluster-keys.json | jq -r ".root_token")  
+    export VAULT_ADDR='http://192.168.99.106:31599'    
+    vault login token=$(cat ./cluster-keys.json | jq -r ".root_token")  
 }
 
 enableKubeAuth() {  
     echo -e "\enableKubeAuth"
-    vault auth enable --path=${SAHAP2_K8S_AUTH_PROFILE_PATH} kubernetes  
+    vault auth enable --path=${sahab2_K8S_AUTH_PROFILE_PATH} kubernetes  
 }
 
 configureKubeAuth(){
@@ -83,7 +83,7 @@ configureKubeAuth(){
     KUBE_CA_CERT_DECODED=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
     KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}')
 
-    vault write auth/${SAHAP2_K8S_AUTH_PROFILE_PATH}/config \
+    vault write auth/${sahab2_K8S_AUTH_PROFILE_PATH}/config \
     token_reviewer_jwt=${SA_JWT_TOKEN} \
     kubernetes_host=${KUBE_HOST} \
     kubernetes_ca_cert="${KUBE_CA_CERT_DECODED}" \
@@ -93,14 +93,14 @@ configureKubeAuth(){
 saveK8SInfo() {
     echo "{ \"certificate-authority-data\":\"${KUBE_CA_CERT}\", \
     \"server\": \"${KUBE_HOST}\",\
-    \"sa-token\":\"${SA_JWT_TOKEN}\" }" | vault kv put ${SAHAP2_KV_PATH}/${SAHAP2_SHARED_KV_PATH}/${PROFILE} - 
+    \"sa-token\":\"${SA_JWT_TOKEN}\" }" | vault kv put ${sahab2_KV_PATH}/${sahab2_SHARED_KV_PATH}/${PROFILE} - 
 }
 
 createPolicy() {
     echo -e "\createPolicy"
 
     vault policy write ${PROFILE}-read - <<EOF
-    path "${SAHAP2_KV_PATH}/data/${PROFILE}/*" {
+    path "${sahab2_KV_PATH}/data/${PROFILE}/*" {
         capabilities = ["read"]
     }
 EOF
@@ -110,11 +110,11 @@ createRoleAndAttachPolicy() {
     
     echo -e "\createRoleAndAttachPolicy"
 
-    vault write auth/${SAHAP2_K8S_AUTH_PROFILE_PATH}/role/${PROFILE} \
+    vault write auth/${sahab2_K8S_AUTH_PROFILE_PATH}/role/${PROFILE} \
         bound_service_account_names=argocd-repo-server \
         bound_service_account_namespaces=argocd \
         policies=${PROFILE}-read \
-        policies=${SAHAP2_SHARED_POLICY_NAME} \
+        policies=${sahab2_SHARED_POLICY_NAME} \
         ttl=24h
 }
 
@@ -125,12 +125,12 @@ createCertificates() {
     # Configure a role that maps a name in Vault to a procedure for generating a certificate. 
     # When users or machines generate credentials, they are generated against this role:
 
-    vault write ${SAHAP2_PKI_PATH}/roles/${PROFILE} \
+    vault write ${sahab2_PKI_PATH}/roles/${PROFILE} \
         allowed_domains=paas2.com \
         allow_subdomains=true \
         max_ttl=72h   
 
-    MY_NEW_CERT=$(vault write -format=json ${SAHAP2_PKI_PATH}/issue/${PROFILE} common_name="www.paas2.com")
+    MY_NEW_CERT=$(vault write -format=json ${sahab2_PKI_PATH}/issue/${PROFILE} common_name="www.paas2.com")
 
     jq '.data.certificate' <<< $MY_NEW_CERT  > ~/ca-cert.pem
     jq '.data.issuing_ca' <<< $MY_NEW_CERT  > ~/root-cert.pem    
@@ -146,7 +146,7 @@ saveCertificatesToVault() {
     echo "{ \"ca-cert\":\"$(cat ~/ca-cert.pem | base64)\", \
     \"ca-key\": \"$(cat ~/ca-key.pem | base64)\",\
     \"root-cert\":\"$(cat ~/root-cert.pem | base64)\",\
-    \"cert-chain\":\"$(cat ~/cert-chain.pem | base64)\" }" | vault kv put ${SAHAP2_KV_PATH}/${PROFILE}/cacerts -     
+    \"cert-chain\":\"$(cat ~/cert-chain.pem | base64)\" }" | vault kv put ${sahab2_KV_PATH}/${PROFILE}/cacerts -     
 }
 
 
