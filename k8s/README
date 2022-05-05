@@ -26,4 +26,5 @@ sh prov.bash \
 --f values-monitoring-dev.yaml \
 --lb 192.168.101.85-192.168.101.98 \
 --profile monitoring-dev \
---memory 4G
+--memory 8G \
+--cpus 3 
