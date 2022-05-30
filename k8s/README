@@ -3,8 +3,8 @@
 sh prov.bash \
 --f values-buildenv-prod.yaml \
 --lb 192.168.100.85-192.168.100.98 \
---profile buildenv \
---memory 8G
+--profile buildenv-prod \
+--memory 6G
 
 
 sh prov.bash \
@@ -15,7 +15,7 @@ sh prov.bash \
 
 
 sh prov.bash \
---f values-security-dev.yaml \
+--f values-security-basko-dev.yaml \
 --lb 192.168.102.85-192.168.102.98 \
 --profile security-dev \
 --memory 6G \
