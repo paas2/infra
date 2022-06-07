@@ -19,7 +19,7 @@ main () {
 
 login(){
 
-    export VAULT_ADDR='http://192.168.59.112:32443'    
+    export VAULT_ADDR='http://192.168.59.133:30698'    
     vault login token=$(cat ./cluster-keys.json | jq -r ".root_token")
 }
 

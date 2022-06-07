@@ -1,30 +1,13 @@
-# Start Dev Cluster
-
+# Start Dev Security Cluster
 sh prov.bash \
---f values-buildenv-prod.yaml \
---lb 192.168.100.85-192.168.100.98 \
---profile buildenv-prod \
---memory 6G
-
-
-sh prov.bash \
---f values-bwb-dev.yaml \
---lb 192.168.101.85-192.168.101.98 \
---profile bwb-dev \
---memory 6G
-
-
-sh prov.bash \
---f values-security-basko-dev.yaml \
 --lb 192.168.102.85-192.168.102.98 \
---profile security-dev \
+--profile security \
+--env dev \
 --memory 6G \
 --cpus 3
 
-
 sh prov.bash \
---f values-monitoring-dev.yaml \
---lb 192.168.101.85-192.168.101.98 \
---profile monitoring-dev \
---memory 8G \
---cpus 3 
+--lb 192.168.102.85-192.168.102.98 \
+--profile build \
+--env dev \
+--memory 6G 

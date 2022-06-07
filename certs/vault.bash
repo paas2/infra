@@ -64,7 +64,7 @@ main () {
 login(){
     echo -e "\login"
     
-    export VAULT_ADDR='http://192.168.59.112:32443'  
+    export VAULT_ADDR='http://192.168.59.133:30698'    
     vault login token=$(cat ./cluster-keys.json | jq -r ".root_token")  
 }
 
@@ -77,8 +77,8 @@ configureKubeAuth(){
     
     echo -e "\configureKubeAuth"
 
-    export VAULT_SA_NAME=$(kubectl --context=${PROFILE} get sa default --output jsonpath="{.secrets[*]['name']}")
-    export SA_JWT_TOKEN=$(kubectl --context=${PROFILE} get secret $VAULT_SA_NAME --output 'go-template={{ .data.token }}' | base64 --decode)
+    export VAULT_SA_NAME=$(kubectl --context=${PROFILE} get sa argocd-repo-server -n argocd --output jsonpath="{.secrets[*]['name']}")
+    export SA_JWT_TOKEN=$(kubectl --context=${PROFILE} get secret $VAULT_SA_NAME -n argocd --output 'go-template={{ .data.token }}' | base64 --decode)
     KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
     KUBE_CA_CERT_DECODED=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
     KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}')

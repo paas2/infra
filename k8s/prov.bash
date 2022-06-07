@@ -5,6 +5,7 @@ LB_ADRESSES=${LB_ADRESSES:-192.168.100.85-192.168.100.98}
 PROFILE=${PROFILE:-dev}
 MEMORY=${MEMORY:-8192}
 CPUS=${CPUS:-2}
+ENV=${ENV:-null}
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -42,7 +43,10 @@ processOptions () {
             ;;  
             --cpus)
                 CPUS=${2}; shift 2
-            ;;                                                                                  
+            ;;   
+            --env)
+                ENV=${2}; shift 2
+            ;;                                                                                              
             -h | --help)
                 usage
             ;;
@@ -60,7 +64,7 @@ processOptions () {
 
 startMinikube() {
   minikube start \
-    --profile "${PROFILE}" \
+    --profile "${PROFILE}-${ENV}" \
     --addons registry \
     --addons metallb \
     --addons ingress \
@@ -95,25 +99,24 @@ EOF
 }
 
 installArgoCd() {
-    git clone https://github.com/paas2/argocd
+    git clone -b dev https://github.com/paas2/argo
 
     kubectl create ns argocd
     kubectl label namespace argocd istio-injection=enabled --overwrite
 
-    helm upgrade argocd ./argocd/helm-charts/argocd \
-    -f ./argocd/helm-charts/argocd/values.yaml \
-    -f ./argocd/helm-charts/argocd/${VALUES_FILE} \
+
+    helm dependency update argo/helm-charts/argocd
+
+    helm upgrade argocd \
+    ./argo/helm-charts/argocd \
+    -f ./argo/helm-charts/argocd/values.yaml \
+    -f ./argo/helm-charts/argocd/values-base.yaml \
+    -f ./argo/helm-charts/argocd/values-base-${ENV}.yaml \
+    -f ./argo/helm-charts/argocd/values-${PROFILE}-${ENV}.yaml \
     --namespace argocd \
-    --install
+    --install   
 
-    
-
-    # helm upgrade argocd ./argocd/helm-charts/argocd \
-    # -f ./argocd/helm-charts/argocd/values.yaml \
-    # -f ./argocd/helm-charts/argocd/values-bwb-dev.yaml \
-    # --namespace argocd --install    
-
-    rm -rf argocd
+    rm -rf argo
 }
 
 main () {
@@ -123,7 +126,8 @@ main () {
     echo "LB_ADRESSES:  ${LB_ADRESSES}"   
     echo "PROFILE:  ${PROFILE}"         
     echo "MEMORY:  ${MEMORY}" 
-    echo "CPUS:  ${CPUS}"                   
+    echo "CPUS:  ${CPUS}" 
+    echo "ENV:  ${ENV}"                       
 
     startMinikube   
     installArgoCd 
