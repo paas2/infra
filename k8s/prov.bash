@@ -70,7 +70,7 @@ startMinikube() {
     --addons ingress \
     --disk-size 40G \
     --memory ${MEMORY} \
-    --cpus ${CPUS} \    
+    --cpus ${CPUS} \
     --driver virtualbox \
     --bootstrapper kubeadm \
     --extra-config kubelet.authentication-token-webhook=true \
