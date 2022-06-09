@@ -71,6 +71,9 @@ login(){
 enableKubeAuth() {  
     echo -e "\enableKubeAuth"
     vault auth enable --path=${sahab2_K8S_AUTH_PROFILE_PATH} kubernetes  
+    
+    # Required to write secrets to destined location
+    vault secrets enable --path=${sahab2_KV_PATH} kv
 }
 
 configureKubeAuth(){
