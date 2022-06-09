@@ -99,7 +99,7 @@ EOF
 }
 
 installArgoCd() {
-    git clone -b dev https://github.com/paas2/argo
+    git clone -b main https://github.com/paas2/argo
 
     kubectl create ns argocd
     kubectl label namespace argocd istio-injection=enabled --overwrite
