@@ -8,6 +8,13 @@ sh prov.bash \
 
 sh prov.bash \
 --lb 192.168.102.85-192.168.102.98 \
+--profile security \
+--env tk \
+--memory 6G \
+--cpus 3
+
+sh prov.bash \
+--lb 192.168.102.85-192.168.102.98 \
 --profile build \
 --env dev \
 --memory 6G 

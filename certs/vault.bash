@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PROFILE=${PROFILE:-dev}
+ENV=${PROFILE:-dev}
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -21,7 +22,10 @@ processOptions () {
         case "$1" in      
             --profile)
                 PROFILE=${2}; shift 2
-            ;;                                                                                                             
+            ;;  
+            --env)
+                ENV=${2}; shift 2
+            ;;                                                                                                                         
             -h | --help)
                 usage
             ;;
@@ -36,12 +40,7 @@ main () {
     echo -e "\nRunning"
     echo "PROFILE:  ${PROFILE}"  
 
-    # K8S_AUTH_PROFILE_PATH=paas2-${PROFILE}  
-    # K8S_AUTH_SHARED_PATH=paas2-shared 
-    # KV_PATH=paas2-kv 
-    # K8_COMMON_KV_PATH=clusters/common
-
-    sahab2_K8S_AUTH_PROFILE_PATH=sahab2-${PROFILE}  
+    sahab2_K8S_AUTH_PROFILE_PATH=sahab2/${ENV}/${PROFILE}  
     
     sahab2_KV_PATH=sahab2-kv
     sahab2_PKI_PATH=sahab2-pki  
@@ -64,8 +63,8 @@ main () {
 login(){
     echo -e "\login"
     
-    export VAULT_ADDR='http://192.168.59.133:30698'    
-    vault login token=$(cat ./cluster-keys.json | jq -r ".root_token")  
+    export VAULT_ADDR='http://127.0.0.1:8200' 
+    vault login token="hvs.ijSHkz80mglpDq2wXXT9zvhN"
 }
 
 enableKubeAuth() {  

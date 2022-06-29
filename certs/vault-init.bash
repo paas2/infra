@@ -1,5 +1,41 @@
 #!/bin/bash
 
+PROFILE=${PROFILE:-dev}
+ENV=${PROFILE:-dev}
+
+errorExit () {
+    echo -e "\nERROR: $1"; echo
+    exit 1
+}
+
+usage () {
+    cat << END_USAGE
+ <options>
+--profile           : [required] profile
+END_USAGE
+
+    exit 1
+}
+
+processOptions () {
+    while [[ $# > 0 ]]; do
+        case "$1" in      
+            --profile)
+                PROFILE=${2}; shift 2
+            ;;  
+            --env)
+                ENV=${2}; shift 2
+            ;;                                                                                                                         
+            -h | --help)
+                usage
+            ;;
+            *)
+                usage
+            ;;
+        esac
+    done
+}
+
 main () {
     echo -e "\nRunning"
 
@@ -19,8 +55,8 @@ main () {
 
 login(){
 
-    export VAULT_ADDR='http://192.168.59.133:30698'    
-    vault login token=$(cat ./cluster-keys.json | jq -r ".root_token")
+    export VAULT_ADDR='http://127.0.0.1:8200' 
+    vault login token="hvs.ijSHkz80mglpDq2wXXT9zvhN"
 }
 
 enableKV2Engine() {
@@ -60,7 +96,7 @@ createSharedPathReadPolicy() {
     echo -e "\createPolicy"
 
     vault policy write ${sahab2_SHARED_POLICY_NAME} - <<EOF
-    path "${sahab2_KV_PATH}/data/${sahab2_SHARED_KV_PATH}/*" {
+    path "${sahab2_KV_PATH}/data//${sahab2_SHARED_KV_PATH}/*" {
         capabilities = ["read"]
     }
 EOF
