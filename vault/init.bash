@@ -38,14 +38,21 @@ main () {
     ./login.bash --env ${ENV}       
     
     export $(grep -v '^#' .${ENV}.env | xargs)
+    
+    
 
     enableKV2Engine
+    saveGitCredentials
     enablePKIEngine
     createSharedPathReadPolicy
 }
 
 enableKV2Engine() {
     vault secrets enable -path ${SAHAB_KV_PATH} -version=2 kv     
+}
+
+saveGitCredentials() {
+    vault kv put ${SAHAB_KV_PATH}/GitHub sshPrivateKey=$(echo $(cat ~/.ssh/id_ed25519 | base64)) url=$(echo "git@github.com:paas2" | base64) 
 }
 
 enablePKIEngine() {
