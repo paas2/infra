@@ -99,24 +99,7 @@ EOF
 }
 
 installArgoCd() {
-    git clone -b main https://github.com/paas2/argo
-
-    kubectl create ns argocd
-    kubectl label namespace argocd istio-injection=enabled --overwrite
-
-
-    helm dependency update argo/helm-charts/argocd
-
-    helm upgrade argocd \
-    ./argo/helm-charts/argocd \
-    -f ./argo/helm-charts/argocd/values.yaml \
-    -f ./argo/helm-charts/argocd/values-base.yaml \
-    -f ./argo/helm-charts/argocd/values-base-${ENV}.yaml \
-    -f ./argo/helm-charts/argocd/values-${PROFILE}-${ENV}.yaml \
-    --namespace argocd \
-    --install   
-
-    rm -rf argo
+    sh ./argo.bash --env ${ENV} --profile ${PROFILE}
 }
 
 main () {
