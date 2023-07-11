@@ -79,7 +79,11 @@ startMinikube() {
     --extra-config controller-manager.bind-address=0.0.0.0 \
     --extra-config apiserver.enable-admission-plugins=ValidatingAdmissionWebhook \
     --extra-config apiserver.enable-admission-plugins=MutatingAdmissionWebhook \
-    --kubernetes-version=v1.23.0
+    --kubernetes-version=v1.23.0 \
+    --mount=true --mount-string="/Users/canpolatoral/Desktop/cer/x1.pem:/etc/ca-certificates/keycloak/x1.pem" \
+    --extra-config=apiserver.oidc-issuer-url=https://canpolattest.uaenorth.cloudapp.azure.com/auth/realms/master \
+    --extra-config=apiserver.oidc-client-id=kube-oidc-proxy \
+    --extra-config=apiserver.oidc-ca-file=/etc/ca-certificates/keycloak/x1.pem
 
     minikube addons disable metrics-server
 

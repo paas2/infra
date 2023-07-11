@@ -56,7 +56,7 @@ main () {
 login(){
 
     export VAULT_ADDR='http://127.0.0.1:8200' 
-    vault login token="hvs.ijSHkz80mglpDq2wXXT9zvhN"
+    vault login token="hvs.KA62SGTOmHmwVWvNFmKW0U96"
 }
 
 enableKV2Engine() {

@@ -3,3 +3,33 @@ sh prov.bash \
 --profile build \
 --env dev \
 --memory 6G 
+
+sh prov-ad.bash \
+--lb 192.168.102.85-192.168.102.98 \
+--profile build \
+--env dev \
+--memory 6G 
+
+sh prov.bash \
+--lb 192.168.102.85-192.168.102.98 \
+--profile monitoring \
+--env dev \
+--memory 6G 
+
+sh prov.bash \
+--lb 192.168.102.85-192.168.102.98 \
+--profile security \
+--env dev \
+--memory 6G 
+
+sh prov-operator.bash \
+--lb 192.168.102.85-192.168.102.98 \
+--profile security-operator \
+--env dev 
+
+
+sh prov-v2.bash \
+--lb 192.168.102.85-192.168.102.98 \
+--profile clustername \
+--env dev \
+--entity ksa

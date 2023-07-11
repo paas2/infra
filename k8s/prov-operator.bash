@@ -112,7 +112,6 @@ main () {
     echo "CPUS:  ${CPUS}" 
     echo "ENV:  ${ENV}"                       
 
-    startMinikube   
     installArgoCd 
 }
 

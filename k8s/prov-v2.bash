@@ -6,6 +6,7 @@ PROFILE=${PROFILE:-dev}
 MEMORY=${MEMORY:-8192}
 CPUS=${CPUS:-2}
 ENV=${ENV:-null}
+ENTITY=${ENTITY:-null}
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -46,7 +47,10 @@ processOptions () {
             ;;   
             --env)
                 ENV=${2}; shift 2
-            ;;                                                                                              
+            ;;      
+            --entity)
+                ENTITY=${2}; shift 2
+            ;;                                                                                          
             -h | --help)
                 usage
             ;;
@@ -62,44 +66,44 @@ processOptions () {
 # --extra-config kubelet.authorization-mode=Webhook -  This flag enables, that the kubelet will perform an RBAC request with the API to determine, whether the requesting entity (Prometheus in this case) is allowed to access a resource, in specific for this project the /metrics endpoint. This can also be enabled by setting the kubelet configuration value authorization.mode to Webhook
 # minikube addons disable metrics-server # The kube-prometheus stack includes a resource metrics API server, so the metrics-server addon is not necessary. Ensure the metrics-server addon is disabled on minikube:
 
-startMinikube() {
-  minikube start \
-    --profile "${PROFILE}-${ENV}" \
-    --addons registry \
-    --addons metallb \
-    --addons ingress \
-    --disk-size 40G \
-    --memory ${MEMORY} \
-    --cpus ${CPUS} \
-    --driver docker \
-    --bootstrapper kubeadm \
-    --extra-config kubelet.authentication-token-webhook=true \
-    --extra-config kubelet.authorization-mode=Webhook \
-    --extra-config scheduler.bind-address=0.0.0.0 \
-    --extra-config controller-manager.bind-address=0.0.0.0 \
-    --extra-config apiserver.enable-admission-plugins=ValidatingAdmissionWebhook \
-    --extra-config apiserver.enable-admission-plugins=MutatingAdmissionWebhook \
-    --kubernetes-version=v1.23.0
+# startMinikube() {
+#   minikube start \
+#     --profile "${PROFILE}-${ENV}" \
+#     --addons registry \
+#     --addons metallb \
+#     --addons ingress \
+#     --disk-size 40G \
+#     --memory ${MEMORY} \
+#     --cpus ${CPUS} \
+#     --driver docker \
+#     --bootstrapper kubeadm \
+#     --extra-config kubelet.authentication-token-webhook=true \
+#     --extra-config kubelet.authorization-mode=Webhook \
+#     --extra-config scheduler.bind-address=0.0.0.0 \
+#     --extra-config controller-manager.bind-address=0.0.0.0 \
+#     --extra-config apiserver.enable-admission-plugins=ValidatingAdmissionWebhook \
+#     --extra-config apiserver.enable-admission-plugins=MutatingAdmissionWebhook \
+#     --kubernetes-version=v1.23.0
 
-    minikube addons disable metrics-server
+#     minikube addons disable metrics-server
 
-  cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: metallb-system
-  name: config
-data:
-  config: |
-    address-pools:
-    - name: default
-      protocol: layer2
-      addresses: ["${LB_ADRESSES}"]
-EOF
-}
+#   cat <<EOF | kubectl apply -f -
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   namespace: metallb-system
+#   name: config
+# data:
+#   config: |
+#     address-pools:
+#     - name: default
+#       protocol: layer2
+#       addresses: ["${LB_ADRESSES}"]
+# EOF
+# }
 
 installArgoCd() {
-    sh ./argo.bash --env ${ENV} --profile ${PROFILE}
+    sh ./argo-v2.bash --env ${ENV} --entity ${ENTITY} --profile ${PROFILE}
 }
 
 main () {
@@ -110,9 +114,10 @@ main () {
     echo "PROFILE:  ${PROFILE}"         
     echo "MEMORY:  ${MEMORY}" 
     echo "CPUS:  ${CPUS}" 
-    echo "ENV:  ${ENV}"                       
+    echo "ENV:  ${ENV}"  
+    echo "ENTITY:  ${ENTITY}"                         
 
-    startMinikube   
+    // startMinikube   
     installArgoCd 
 }
 

@@ -64,7 +64,7 @@ login(){
     echo -e "\login"
     
     export VAULT_ADDR='http://127.0.0.1:8200' 
-    vault login token="hvs.ijSHkz80mglpDq2wXXT9zvhN"
+    vault login token="hvs.KA62SGTOmHmwVWvNFmKW0U96"
 }
 
 enableKubeAuth() {  
@@ -77,10 +77,22 @@ configureKubeAuth(){
     echo -e "\configureKubeAuth"
 
     export VAULT_SA_NAME=$(kubectl --context=${PROFILE} get sa argocd-repo-server -n argocd --output jsonpath="{.secrets[*]['name']}")
+    echo -e "\VAULT_SA_NAME"
+    echo $VAULT_SA_NAME
+
     export SA_JWT_TOKEN=$(kubectl --context=${PROFILE} get secret $VAULT_SA_NAME -n argocd --output 'go-template={{ .data.token }}' | base64 --decode)
+    echo -e "\SA_JWT_TOKEN"
+    echo $SA_JWT_TOKEN
+    
     KUBE_HOST=$(kubectl --context=${PROFILE} config view --minify | grep server | cut -f 2- -d ":" | tr -d " ") 
     KUBE_CA_CERT_DECODED=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
     KUBE_CA_CERT=$(kubectl --context=${PROFILE} config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}')
+
+    echo -e "\KUBE_HOST"
+    echo $KUBE_HOST
+
+    echo -e "\KUBE_CA_CERT_DECODED"
+    echo $KUBE_CA_CERT_DECODED
 
     vault write auth/${sahab2_K8S_AUTH_PROFILE_PATH}/config \
     token_reviewer_jwt=${SA_JWT_TOKEN} \
